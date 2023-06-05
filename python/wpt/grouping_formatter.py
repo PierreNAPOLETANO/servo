@@ -275,21 +275,14 @@ class ServoFormatter(mozlog.formatters.base.BaseFormatter, ServoHandler):
 
         if self.running_tests:
             indent = " " * len(new_display)
-            if self.interactive:
-                max_width = self.line_width - len(new_display)
-            else:
-                max_width = sys.maxsize
-            return new_display + ("\n%s" % indent).join(
-                val[:max_width] for val in self.running_tests.values()) + "\n"
+            max_width = self.line_width - len(new_display) if self.interactive else sys.maxsize
+            return new_display + ("\n%s" % indent).join(val[:max_width] for val in self.running_tests.values()) + "\n"
         else:
             return new_display + "No tests running.\n"
 
     def suite_start(self, data):
         ServoHandler.suite_start(self, data)
-        if self.number_of_tests == 0:
-            return "Running tests in %s\n\n" % data[u'source']
-        else:
-            return "Running %i tests in %s\n\n" % (self.number_of_tests, data[u'source'])
+        return "Running tests in %s\n\n" % data[u'source'] if self.number_of_tests == 0 else "Running %i tests in %s\n\n" % (self.number_of_tests, data[u'source'])
 
     def test_start(self, data):
         ServoHandler.test_start(self, data)
@@ -299,36 +292,24 @@ class ServoFormatter(mozlog.formatters.base.BaseFormatter, ServoHandler):
     def test_end(self, data):
         unexpected_result = ServoHandler.test_end(self, data)
         if not unexpected_result:
-            if self.interactive:
-                return self.generate_output(new_display=self.build_status_line())
-            else:
-                return self.generate_output(text="%s%s\n" % (self.test_counter(), data["test"]))
+            return self.generate_output(new_display=self.build_status_line()) if self.interactive else self.generate_output(text="%s%s\n" % (self.test_counter(), data["test"]))
 
         # Surround test output by newlines so that it is easier to read.
         output_for_unexpected_test = f"{unexpected_result}\n"
-        return self.generate_output(text=output_for_unexpected_test,
-                                    new_display=self.build_status_line())
+        return self.generate_output(text=output_for_unexpected_test, new_display=self.build_status_line())
 
     def test_status(self, data):
         ServoHandler.test_status(self, data)
 
     def suite_end(self, data):
         ServoHandler.suite_end(self, data)
-        if not self.interactive:
-            output = u"\n"
-        else:
-            output = ""
-
-        output += u"Ran %i tests finished in %.1f seconds.\n" % (
-            self.completed_tests, (data["time"] - self.suite_start_time) / 1000)
-        output += u"  \u2022 %i ran as expected. %i tests skipped.\n" % (
-            sum(self.expected.values()), self.expected['SKIP'])
+        output = u"\n" if not self.interactive else ""
+        output += u"Ran %i tests finished in %.1f seconds.\n" % (self.completed_tests, (data["time"] - self.suite_start_time) / 1000)
+        output += u"  \u2022 %i ran as expected. %i tests skipped.\n" % (sum(self.expected.values()), self.expected['SKIP'])
 
         def text_for_unexpected_list(text, section):
             tests = self.unexpected_tests[section]
-            if not tests:
-                return u""
-            return u"  \u2022 %i tests %s\n" % (len(tests), text)
+            return u"" if not tests else u"  \u2022 %i tests %s\n" % (len(tests), text)
 
         output += text_for_unexpected_list(u"crashed unexpectedly", 'CRASH')
         output += text_for_unexpected_list(u"had errors unexpectedly", 'ERROR')
