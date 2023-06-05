@@ -379,17 +379,13 @@ def check_lock(file_name, contents):
         if has_duplicates == duplicates_allowed:
             continue
 
-        if duplicates_allowed:
-            message = 'duplicates for `{}` are allowed, but only single version found'.format(name)
-        else:
-            message = "duplicate versions for package `{}`".format(name)
+        message = f'duplicates for {name} are allowed, but only single version found' if duplicates_allowed else f"duplicate versions for package {name}"
 
         packages.sort()
         packages_dependencies = list(find_reverse_dependencies(name, content))
         for version, source in packages:
             short_source = source.split("#")[0].replace("git+", "")
-            message += "\n\t\033[93mThe following packages depend on version {} from '{}':\033[0m" \
-                       .format(version, short_source)
+            message += "\n\t\033[93mThe following packages depend on version {} from '{}':\033[0m".format(version, short_source)
             for pname, package_version, dependency in packages_dependencies:
                 if (not dependency[1] or version in dependency[1]) and \
                    (not dependency[2] or short_source in dependency[2]):
@@ -455,7 +451,7 @@ def check_shell(file_name, lines):
         return
 
     if lines[0].rstrip() != shebang.encode("utf-8"):
-        yield (1, 'script does not have shebang "{}"'.format(shebang))
+        yield (1, f'script does not have shebang "{shebang}"')
 
     for idx, line in enumerate(map(lambda line: line.decode("utf-8"), lines[1:])):
         stripped = line.rstrip()
@@ -470,8 +466,8 @@ def check_shell(file_name, lines):
                 # The first non-comment, non-whitespace, non-option line is the first "real" line of the script.
                 # The shebang, options, etc. must come before this.
                 if required_options:
-                    formatted = ['"{}"'.format(opt) for opt in required_options]
-                    yield (idx + 1, "script is missing options {}".format(", ".join(formatted)))
+                    formatted = [f'"{opt}"' for opt in required_options]
+                    yield (idx + 1, f'script is missing options {", ".join(formatted)}')
                 did_shebang_check = True
 
         if "`" in stripped:
@@ -484,7 +480,7 @@ def check_shell(file_name, lines):
             next_idx = dollar.end()
             if next_idx < len(stripped):
                 next_char = stripped[next_idx]
-                if not (next_char == '{' or next_char == '('):
+                if next_char not in ['{', '(']:
                     yield(idx + 1, "variable substitutions should use the full \"${VAR}\" form")
 
 
@@ -500,7 +496,7 @@ def rec_parse(current_path, root_node):
 
 def check_manifest_dirs(config_file, print_text=True):
     if not os.path.exists(config_file):
-        yield(config_file, 0, "%s manifest file is required but was not found" % config_file)
+        yield (config_file, 0, f"{config_file} manifest file is required but was not found")
         return
 
     # Load configs from include.ini
@@ -517,7 +513,7 @@ def check_manifest_dirs(config_file, print_text=True):
         if '_mozilla' in path or '_webgl' in path or '_webgpu' in path:
             continue
         if not os.path.isdir(path):
-            yield(config_file, idx + 1, "Path in manifest was not found: {}".format(path))
+            yield (config_file, idx + 1, f"Path in manifest was not found: {path}")
 
 
 def check_rust(file_name, lines):
@@ -542,8 +538,7 @@ def check_rust(file_name, lines):
         os.path.join("*", "ports", "winit", "embedder.rs"),
         os.path.join("*", "rust_tidy.rs"),  # This is for the tests.
     ]
-    is_panic_not_allowed_rs_file = any([
-        glob.fnmatch.fnmatch(file_name, path) for path in PANIC_NOT_ALLOWED_PATHS])
+    is_panic_not_allowed_rs_file = any([glob.fnmatch.fnmatch(file_name, path) for path in PANIC_NOT_ALLOWED_PATHS])
 
     prev_open_brace = False
     multi_line_string = False
@@ -730,7 +725,7 @@ def check_rust(file_name, lines):
 def is_associated_type(match, line):
     if match.group(1) != '=':
         return False
-    open_angle = line[0:match.end()].rfind('<')
+    open_angle = line[:match.end()].rfind('<')
     close_angle = line[open_angle:].find('>') if open_angle != -1 else -1
     generic_open = open_angle != -1 and open_angle < match.start()
     generic_close = close_angle != -1 and close_angle + open_angle >= match.end()
@@ -822,7 +817,7 @@ def check_yaml(file_name, contents):
         line = e.problem_mark.line + 1 if hasattr(e, 'problem_mark') else None
         yield (line, e)
     except KeyError as e:
-        yield (None, "Duplicated Key ({})".format(e.args[0]))
+        yield (None, f"Duplicated Key ({e.args[0]})")
     except voluptuous.MultipleInvalid as e:
         yield (None, str(e))
 
@@ -832,7 +827,7 @@ def check_for_possible_duplicate_json_keys(key_value_pairs):
     seen_keys = set()
     for key in keys:
         if key in seen_keys:
-            raise KeyError("Duplicated Key (%s)" % key)
+            raise KeyError(f"Duplicated Key ({key})")
 
         seen_keys.add(key)
 
@@ -840,7 +835,7 @@ def check_for_possible_duplicate_json_keys(key_value_pairs):
 def check_for_alphabetical_sorted_json_keys(key_value_pairs):
     for a, b in zip(key_value_pairs[:-1], key_value_pairs[1:]):
         if a[0] > b[0]:
-            raise KeyError("Unordered key (found %s before %s)" % (a[0], b[0]))
+            raise KeyError(f"Unordered key (found {a[0]} before {b[0]})")
 
 
 def check_json_requirements(filename):
@@ -882,7 +877,7 @@ def check_spec(file_name, lines):
 
     brace_count = 0
     in_impl = False
-    pattern = "impl {}Methods for {} {{".format(file_name, file_name)
+    pattern = f"impl {file_name}Methods for {file_name} {{"
 
     for idx, line in enumerate(map(lambda line: line.decode("utf-8"), lines)):
         if "// check-tidy: no specs after this line" in line:
@@ -910,7 +905,7 @@ def check_spec(file_name, lines):
 def check_config_file(config_file, print_text=True, no_wpt=False):
     # Check if config file exists
     if not os.path.exists(config_file):
-        print("%s config file is required but was not found" % config_file)
+        print(f"{config_file} config file is required but was not found")
         sys.exit(1)
 
     # Load configs from servo-tidy.toml
@@ -947,7 +942,7 @@ def check_config_file(config_file, print_text=True, no_wpt=False):
         if re.match(r"\[(.*?)\]", line.strip()):
             table_name = re.findall(r"\[(.*?)\]", line)[0].strip()
             if table_name not in ("configs", "blocked-packages", "ignore", "check_ext"):
-                yield config_file, idx + 1, "invalid config table [%s]" % table_name
+                yield (config_file, idx + 1, f"invalid config table [{table_name}]")
             current_table = table_name
             continue
 
@@ -955,7 +950,7 @@ def check_config_file(config_file, print_text=True, no_wpt=False):
         if current_table == "ignore" and invalid_dirs:
             for d in invalid_dirs:
                 if line.strip().strip('\'",') == d:
-                    yield config_file, idx + 1, "ignored directory '%s' doesn't exist" % d
+                    yield (config_file, idx + 1, f"ignored directory '{d}' doesn't exist")
                     invalid_dirs.remove(d)
                     break
 
@@ -963,7 +958,7 @@ def check_config_file(config_file, print_text=True, no_wpt=False):
         if current_table == "ignore" and invalid_files:
             for f in invalid_files:
                 if line.strip().strip('\'",') == f:
-                    yield config_file, idx + 1, "ignored file '%s' doesn't exist" % f
+                    yield (config_file, idx + 1, f"ignored file '{f}' doesn't exist")
                     invalid_files.remove(f)
                     break
 
@@ -974,11 +969,8 @@ def check_config_file(config_file, print_text=True, no_wpt=False):
         key = line.split("=")[0].strip()
 
         # Check for invalid keys inside [configs] and [ignore] table
-        if (current_table == "configs" and key not in config
-                or current_table == "ignore" and key not in config["ignore"]
-                # Any key outside of tables
-                or current_table == ""):
-            yield config_file, idx + 1, "invalid config key '%s'" % key
+        if (current_table == "configs" and key not in config or current_table == "ignore" and key not in config["ignore"] or current_table == ""):
+            yield (config_file, idx + 1, f"invalid config key '{key}'")
 
     # Parse config file
     parse_config(config_content)
@@ -1075,8 +1067,7 @@ def check_dep_license_errors(filenames, progress=True):
 
 
 class LintRunner(object):
-    def __init__(self, lint_path=None, only_changed_files=True,
-                 exclude_dirs=[], progress=True, stylo=False, no_wpt=False):
+    def __init__(self, lint_path=None, only_changed_files=True, exclude_dirs=[], progress=True, stylo=False, no_wpt=False):
         self.only_changed_files = only_changed_files
         self.exclude_dirs = exclude_dirs
         self.progress = progress
@@ -1132,25 +1123,20 @@ def scan(only_changed_files=False, progress=True, stylo=False, no_wpt=False):
     # check config file for errors
     config_errors = check_config_file(CONFIG_FILE_PATH, no_wpt=no_wpt)
     # check ini directories exist
-    if not no_wpt and os.path.isfile(WPT_MANIFEST_PATH):
-        manifest_errors = check_manifest_dirs(WPT_MANIFEST_PATH)
-    else:
-        manifest_errors = ()
+    manifest_errors = check_manifest_dirs(WPT_MANIFEST_PATH) if not no_wpt and os.path.isfile(WPT_MANIFEST_PATH) else ()
     # check directories contain expected files
     directory_errors = check_directory_files(config['check_ext'])
     # standard checks
     files_to_check = filter_files('.', only_changed_files and not stylo, progress)
     checking_functions = (check_flake8, check_lock, check_webidl_spec, check_json, check_yaml)
-    line_checking_functions = (check_license, check_by_line, check_toml, check_shell,
-                               check_rust, check_spec, check_modeline)
+    line_checking_functions = (check_license, check_by_line, check_toml, check_shell, check_rust, check_spec, check_modeline)
     file_errors = collect_errors_for_files(files_to_check, checking_functions, line_checking_functions)
     # check dependecy licenses
     dep_license_errors = check_dep_license_errors(get_dep_toml_files(only_changed_files), progress)
     # other lint checks
     lint_errors = run_lint_scripts(only_changed_files, progress, stylo=stylo, no_wpt=no_wpt)
     # chain all the iterators
-    errors = itertools.chain(config_errors, manifest_errors, directory_errors, lint_errors,
-                             file_errors, dep_license_errors)
+    errors = itertools.chain(config_errors, manifest_errors, directory_errors, lint_errors, file_errors, dep_license_errors)
 
     error = None
     colorama.init()
