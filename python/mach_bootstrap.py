@@ -93,9 +93,7 @@ def _get_exec_path(names, is_valid_path=lambda _path: True):
 
 def _get_virtualenv_script_dir():
     # Virtualenv calls its scripts folder "bin" on linux/OSX/MSYS64 but "Scripts" on Windows
-    if os.name == "nt" and os.sep != "/":
-        return "Scripts"
-    return "bin"
+    return "Scripts" if os.name == "nt" and os.sep != "/" else "bin"
 
 
 def _process_exec(args):
@@ -106,11 +104,7 @@ def _process_exec(args):
             if process.returncode:
                 print('"%s" failed with error code %d:' % ('" "'.join(args), process.returncode))
 
-                if sys.version_info >= (3, 0):
-                    stdout = sys.stdout.buffer
-                else:
-                    stdout = sys.stdout
-
+                stdout = sys.stdout.buffer if sys.version_info >= (3, 0) else sys.stdout
                 print('Output:')
                 out.seek(0)
                 stdout.flush()
@@ -127,31 +121,19 @@ def _process_exec(args):
 
 
 def wpt_path(is_firefox, topdir, *paths):
-    if is_firefox:
-        rel = os.path.join("..", "testing", "web-platform")
-    else:
-        rel = os.path.join("tests", "wpt")
-
+    rel = os.path.join("..", "testing", "web-platform") if is_firefox else os.path.join("tests", "wpt")
     return os.path.join(topdir, rel, *paths)
 
 
 def wptrunner_path(is_firefox, topdir, *paths):
     wpt_root = wpt_path(is_firefox, topdir)
-    if is_firefox:
-        rel = os.path.join(wpt_root, "tests", "tools", "wptrunner")
-    else:
-        rel = os.path.join(wpt_root, "web-platform-tests", "tools", "wptrunner")
-
+    rel = os.path.join(wpt_root, "tests", "tools", "wptrunner") if is_firefox else os.path.join(wpt_root, "web-platform-tests", "tools", "wptrunner")
     return os.path.join(topdir, rel, *paths)
 
 
 def wptserve_path(is_firefox, topdir, *paths):
     wpt_root = wpt_path(is_firefox, topdir)
-    if is_firefox:
-        rel = os.path.join(wpt_root, "tests", "tools", "wptserve")
-    else:
-        rel = os.path.join(wpt_root, "web-platform-tests", "tools", "wptserve")
-
+    rel = os.path.join(wpt_root, "tests", "tools", "wptserve") if is_firefox else os.path.join(wpt_root, "web-platform-tests", "tools", "wptserve")
     return os.path.join(topdir, rel, *paths)
 
 
@@ -231,9 +213,7 @@ def _is_windows():
 
 def is_firefox_checkout(topdir):
     parentdir = os.path.normpath(os.path.join(topdir, '..'))
-    is_firefox = os.path.isfile(os.path.join(parentdir,
-                                             'build/mach_bootstrap.py'))
-    return is_firefox
+    return os.path.isfile(os.path.join(parentdir, 'build/mach_bootstrap.py'))
 
 
 def bootstrap_command_only(topdir):
